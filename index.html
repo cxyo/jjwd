@@ -1,79 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>m-web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to HTML Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
 
+<h2>上传 CSV 文件并在页面上展示为表格</h2>
 
-<!-- <h3>学生信息表</h3> -->
-<table border="1" width="700" align="center" cellspacing="0" cellpadding="6">
-    <caption>学生信息表</caption>
-    <thead>
-    <tr align="left">
-        <td>姓名</td>
-        <td>性别</td>
-        <td>芳龄</td>
-        <td>班级</td>
-        <td>备注</td>
-    </tr>
-    </thead>
-    <tbody id="container">
-    <!--//todo 表格内容使用模板渲染 -->
-    <script type="text/x-handlebars-template" id="template">
-        {{#each this}}
+<input type="file" id="csvFile" accept=".csv">
+<button onclick="parseCSV()">转换</button>
 
-        <tr align="left">
-            <td>{{name}}</td>
-            <td>{{gender}}</td>
-            <td>{{age}}</td>
-            <td>{{classes}}</td>
-            <td>{{note}}</td>
-        </tr>
+<div id="outputTable"></div>
 
-        {{/each}}
-    </script>
-    </tbody>
-</table>
-
-<script src="./handlebars-v4.7.8.js"></script>
 <script>
-    var student = [
-        {name: '鲁班七号', gender: '未知', age: '20', classes: '一年级射手班', note: '智商二百五的电玩小子，biubiubiu，就是腿短！'},
-        {name: '安琪拉', gender: '女', age: '18', classes: '一年级法师班', note: '什么什么魔法书！'},
-        {name: '程咬金', gender: '男', age: '30', classes: '一年级二班', note: '爱与正义之斧，偷偷推到'},
-        {name: '阿珂', gender: '女', age: '19', classes: '三年级刺客班', note: '哪里亮了点哪里，都是我的人头！'},
-        {name: '李白', gender: '男', age: '20', classes: '一年级酒酒仙班', note: '但愿长醉不愿醒，我是来无影去无踪，帅!'},
-        {name: '森瑶', gender: '女', age: '20', classes: '皮肤班级', note: '不然梦会碎还是破！'},
-        {name: '鲁班七号', gender: '未知', age: '20', classes: '一年级射手班', note: '智商二百五的电玩小子，biubiubiu，就是腿短！'},
-        {name: '安琪拉', gender: '女', age: '18', classes: '一年级法师班', note: '什么什么魔法书！'},
-        {name: '程咬金', gender: '男', age: '30', classes: '一年级二班', note: '爱与正义之斧，偷偷推到'},
-        {name: '阿珂', gender: '女', age: '19', classes: '三年级刺客班', note: '哪里亮了点哪里，都是我的人头！'},
-        {name: '李白', gender: '男', age: '20', classes: '一年级酒酒仙班', note: '但愿长醉不愿醒，我是来无影去无踪，帅!'},
-        {name: '森瑶', gender: '女', age: '20', classes: '皮肤班级', note: '不然梦会碎还是破！'}, {
-            name: '鲁班七号',
-            gender: '未知',
-            age: '20',
-            classes: '一年级射手班',
-            note: '智商二百五的电玩小子，biubiubiu，就是腿短！'
-        },
-        {name: '安琪拉', gender: '女', age: '18', classes: '一年级法师班', note: '什么什么魔法书！'},
-        {name: '程咬金', gender: '男', age: '30', classes: '一年级二班', note: '爱与正义之斧，偷偷推到'},
-        {name: '阿珂', gender: '女', age: '19', classes: '三年级刺客班', note: '哪里亮了点哪里，都是我的人头！'},
-        {name: '李白', gender: '男', age: '20', classes: '一年级酒酒仙班', note: '但愿长醉不愿醒，我是来无影去无踪，帅!'},
-        {name: '森瑶', gender: '女', age: '20', classes: '皮肤班级', note: '不然梦会碎还是破！'}
-    ]
+    function parseCSV() {
+        const input = document.getElementById('csvFile');
+        if (!input.files || !input.files[0]) {
+            alert("请选择一个 CSV 文件");
+            return;
+        }
 
-    //获取需要放数据的容器
-    var container = document.querySelector('#container');
-    //也就是获取我们定义的模板的dom对象。主要是想获取里面的内容（innerHTML）
-    var templateDom = document.querySelector('#template');
-    //编译模板的里的内容
-    var template = Handlebars.compile(templateDom.innerHTML);
-    //把后台获取到的数据student渲染到页面
-    container.innerHTML = template(student);
+        const file = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const csvData = event.target.result;
+            const lines = csvData.split('\n'); // 按行分割 CSV 内容
+            const headers = lines[0].split(','); // 提取 CSV 表头
+
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const currentLine = lines[i].split(',');
+
+                if (currentLine.length === headers.length) { // 确保行长度匹配表头
+                    const obj = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        obj[headers[j].trim()] = currentLine[j].trim(); // 键值对匹配
+                    }
+                    result.push(obj); // 存入结果数组
+                }
+            }
+
+            // 调用显示表格的函数
+            displayTable(result, headers);
+        };
+
+        reader.readAsText(file); // 读取文件内容
+    }
+
+    function displayTable(data, headers) {
+        const outputTable = document.getElementById('outputTable');
+
+        // 清除之前的表格内容
+        outputTable.innerHTML = "";
+
+        // 创建一个 HTML 表格
+        const table = document.createElement('table');
+
+        // 创建表头
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header.trim();
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // 创建表体
+        const tbody = document.createElement('tbody');
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const td = document.createElement('td');
+                td.textContent = row[header.trim()];
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        // 将表格添加到页面上
+        outputTable.appendChild(table);
+    }
 </script>
+
 </body>
 </html>
